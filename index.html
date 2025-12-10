@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo da Velha com Minimax</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 5px;
+            margin: 20px 0;
+        }
+
+        .cell {
+            width: 100px;
+            height: 100px;
+            background-color: #fff;
+            border: 2px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            cursor: pointer;
+        }
+
+        .cell:hover {
+            background-color: #e0e0e0;
+        }
+
+        .status {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Jogo da Velha</h1>
+    <div class="status">Sua vez (X)</div>
+    <div class="board" id="board">
+        <div class="cell" data-index="0"></div>
+        <div class="cell" data-index="1"></div>
+        <div class="cell" data-index="2"></div>
+        <div class="cell" data-index="3"></div>
+        <div class="cell" data-index="4"></div>
+        <div class="cell" data-index="5"></div>
+        <div class="cell" data-index="6"></div>
+        <div class="cell" data-index="7"></div>
+        <div class="cell" data-index="8"></div>
+    </div>
+    <button id="reset">Reiniciar Jogo</button>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const board = document.getElementById('board');
+            const cells = document.querySelectorAll('.cell');
+            const status = document.querySelector('.status');
+            const resetButton = document.getElementById('reset');
+
+            let currentPlayer = 'X';
+            let gameState = ['', '', '', '', '', '', '', '', ''];
+            let gameActive = true;
+
+            const winningConditions = [
+                [0, 1, 2], // Linha superior
+                [3, 4, 5], // Linha do meio
+                [6, 7, 8], // Linha inferior
+                [0, 3, 6], // Coluna esquerda
+                [1, 4, 7], // Coluna do meio
+                [2, 5, 8], // Coluna direita
+                [0, 4, 8], // Diagonal superior esquerda
+                [2, 4, 6]  // Diagonal superior direita
+            ];
+
+            // Função para verificar se alguém venceu
+            function checkWin(state = gameState) {
+                for (let condition of winningConditions) {
+                    const [a, b, c] = condition;
+                    if (state[a] && state[a] === state[b] && state[a] === state[c]) {
+                        return state[a];
+                    }
+                }
+                return null;
+            }
+
+            // Função para verificar se o jogo terminou em empate
+            function checkDraw(state = gameState) {
+                return !state.includes('');
+            }
+
+            // Função para encontrar todas as células vazias
+            function getEmptyCells(state = gameState) {
+                return state
+                    .map((cell, index) => cell === '' ? index : null)
+                    .filter(val => val !== null);
+            }
+
+            // Algoritmo Minimax
+            function minimax(state, depth, isMaximizing) {
+                const winner = checkWin(state);
+
+                // Se a IA venceu, retorna +1
+                if (winner === 'O') return 10 - depth;
+                // Se o jogador venceu, retorna -1
+                if (winner === 'X') return -10 + depth;
+                // Se deu empate, retorna 0
+                if (checkDraw(state)) return 0;
+
+                if (isMaximizing) {
+                    let bestScore = -Infinity;
+                    const emptyCells = getEmptyCells(state);
+                    for (let index of emptyCells) {
+                        const newState = [...state];
+                        newState[index] = 'O';
+                        const score = minimax(newState, depth + 1, false);
+                        bestScore = Math.max(score, bestScore);
+                    }
+                    return bestScore;
+                } else {
+                    let bestScore = Infinity;
+                    const emptyCells = getEmptyCells(state);
+                    for (let index of emptyCells) {
+                        const newState = [...state];
+                        newState[index] = 'X';
+                        const score = minimax(newState, depth + 1, true);
+                        bestScore = Math.min(score, bestScore);
+                    }
+                    return bestScore;
+                }
+            }
+
+            // Função para a jogada da IA usando Minimax
+            function aiMove() {
+                const emptyCells = getEmptyCells();
+                let bestScore = -Infinity;
+                let bestMove = null;
+
+                for (let index of emptyCells) {
+                    const newState = [...gameState];
+                    newState[index] = 'O';
+                    const score = minimax(newState, 0, false);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMove = index;
+                    }
+                }
+
+                // Faz a jogada
+                gameState[bestMove] = 'O';
+                cells[bestMove].textContent = 'O';
+                cells[bestMove].classList.add('occupied');
+
+                // Verifica se a IA venceu
+                const winner = checkWin();
+                if (winner) {
+                    status.textContent = 'A IA venceu!';
+                    gameActive = false;
+                    return;
+                }
+
+                // Verifica se deu empate
+                if (checkDraw()) {
+                    status.textContent = 'Empate!';
+                    gameActive = false;
+                    return;
+                }
+
+                // Se não, continua o jogo
+                currentPlayer = 'X';
+                status.textContent = 'Sua vez (X)';
+            }
+
+            // Função para lidar com o clique em uma célula
+            function handleCellClick(e) {
+                const cell = e.target;
+                const index = cell.getAttribute('data-index');
+
+                // Verifica se a célula já está ocupada ou se não é a vez do jogador
+                if (gameState[index] !== '' || currentPlayer !== 'X' || !gameActive) {
+                    return;
+                }
+
+                // Faz a jogada do jogador
+                gameState[index] = 'X';
+                cell.textContent = 'X';
+                cell.classList.add('occupied');
+
+                // Verifica se o jogador venceu
+                const winner = checkWin();
+                if (winner) {
+                    status.textContent = 'Você venceu!';
+                    gameActive = false;
+                    return;
+                }
+
+                // Verifica se deu empate
+                if (checkDraw()) {
+                    status.textContent = 'Empate!';
+                    gameActive = false;
+                    return;
+                }
+
+                // Se não, é a vez da IA
+                currentPlayer = 'O';
+                status.textContent = 'Vez da IA (O)';
+                setTimeout(aiMove, 500);
+            }
+
+            // Função para reiniciar o jogo
+            function resetGame() {
+                gameState = ['', '', '', '', '', '', '', '', ''];
+                cells.forEach(cell => {
+                    cell.textContent = '';
+                    cell.classList.remove('occupied');
+                });
+                currentPlayer = 'X';
+                gameActive = true;
+                status.textContent = 'Sua vez (X)';
+            }
+
+            // Adiciona eventos de clique às células
+            cells.forEach(cell => {
+                cell.addEventListener('click', handleCellClick);
+            });
+
+            // Adiciona evento de clique ao botão de reiniciar
+            resetButton.addEventListener('click', resetGame);
+        });
+    </script>
+</body>
+</html>
